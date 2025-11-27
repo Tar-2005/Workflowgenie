@@ -36,7 +36,7 @@ __pycache__/
 venv/
 ENV/
 env/
-
+!.env.example
 # -----------------------------
 # VS Code / Editor artifacts
 # -----------------------------
