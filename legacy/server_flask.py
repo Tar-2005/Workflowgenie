@@ -139,7 +139,7 @@ def create_app():
             logger.exception("Failed to delete task %s", task_id)
             return jsonify({"error": str(e)}), 500
 
-    # Dashboard endpoint removed — legacy dashboard static files deleted.
+ 
 
     return app
 
@@ -147,4 +147,6 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    port = int(os.environ.get("PORT", "8080"))
+    print("Flask starting on port", port)
+    app.run(host="0.0.0.0", port=port)
