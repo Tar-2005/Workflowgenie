@@ -66,9 +66,17 @@ Generates a structured daily schedule:
 }
 ```
 
-#### **Reminder Agent**
+    server_flask.py
+    legacy/static/
+      index.html
+      app.js
+      style.css
 
-Creates reminders for tasks due soon.
+  ## Architecture Diagram
+
+  An architecture diagram illustrating the multi-agent flow is included below. Add the image file `flowchart.png` to `legacy/static/` (path: `legacy/static/flowchart.png`) and it will be displayed here automatically.
+
+  ![WorkflowGenie Architecture](legacy/static/flowchart.png)
 (Logic-based, no LLM necessary)
 
 #### **Reporter Agent**

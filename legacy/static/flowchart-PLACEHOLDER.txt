@@ -1,0 +1,13 @@
+Place your architecture diagram image here so README can display it.
+
+Steps to add the image:
+
+1. Save your diagram as PNG named `flowchart.png`.
+2. Put the file at: `legacy/static/flowchart.png` (project relative path).
+3. Commit the file to the repository:
+
+   git add legacy/static/flowchart.png
+   git commit -m "Add architecture diagram"
+   git push
+
+Once the file exists at that path, the project's `README.md` will render the image automatically under "Architecture Diagram".
