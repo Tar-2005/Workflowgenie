@@ -50,13 +50,11 @@ def run(workflow: Workflow, memory: Any, inputs: Dict[str, Any]):
                 logging.getLogger(__name__).exception(f"Workflow step {step_name} failed: {e}")
                 result[step_name] = {"error": str(e)}
     finally:
-        # Auto-clear DB after workflow completes (stateless operation)
-        if hasattr(memory, 'clear_db'):
-            try:
-                memory.clear_db()
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).exception(f"Failed to clear DB after workflow: {e}")
+        # NOTE: Previously the workflow auto-cleared the DB here to enforce
+        # a stateless operation. That behavior was removed so that stored
+        # tasks/events remain persistently available until an explicit
+        # user action (Clear DB) is taken from the UI or API.
+        pass
     
     return result
 

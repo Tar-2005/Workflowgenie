@@ -2,10 +2,6 @@ import os
 import sys
 import logging
 
-# When running this file directly (python legacy/server_flask.py), the
-# script's directory becomes sys.path[0] which prevents importing the
-# top-level packages. Ensure the repository root is on sys.path so
-# `workflows` and other top-level packages can be imported early.
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
@@ -124,6 +120,12 @@ def create_app():
 
     @app.route("/clear_db", methods=["POST"])
     def clear_db():
+        # Require explicit confirmation in request body to avoid accidental clears.
+        # Client should POST JSON: {"confirm": true}
+        data = request.get_json(silent=True) or {}
+        if not data.get("confirm"):
+            return jsonify({"error": "missing 'confirm': true in request body"}), 400
+
         from state.memory_store import TaskMemory
         mem = TaskMemory()
         mem.clear_db()

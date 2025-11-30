@@ -125,23 +125,34 @@
             if (!confirm('Clear the local DB? This will remove stored tasks.')) return;
             setLoading(true);
             try {
-                const resp = await fetch('/clear_db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-                if (!resp.ok) {
-                    const errBody = await resp.text().catch(() => '');
-                    showError('Failed to clear DB: ' + (errBody || resp.statusText));
+                // Wait for server to be reachable by checking /health
+                let healthy = false;
+                for (let i = 0; i < 6; i++) {
+                    try {
+                        const h = await fetch('/health', { method: 'GET', cache: 'no-cache' });
+                        if (h.ok) { healthy = true; break; }
+                    } catch (e) {
+                        // server not yet reachable
+                    }
+                    await new Promise(r => setTimeout(r, 300));
+                }
+                if (!healthy) {
+                    showError('Server not available. Start the Flask server and try again.');
                     return;
                 }
+
+                // Send explicit confirmation JSON required by server
+                const resp = await fetch('/clear_db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) });
+                if (!resp.ok) {
+                    const errBody = await resp.json().catch(() => null);
+                    const msg = errBody && errBody.error ? errBody.error : (resp.statusText || 'unknown error');
+                    showError('Failed to clear DB: ' + msg);
+                    return;
+                }
+
                 // show success message and clear results area
                 clearResults();
                 resultsEl.appendChild(mkNode('div', 'empty', 'Database cleared.'));
-
-                // try to refresh dashboard data if user is on dashboard
-                try {
-                    if (window.location.pathname === '/dashboard') {
-                        // reload dashboard to pick up cleared DB
-                        window.location.reload();
-                    }
-                } catch (e) { /* noop */ }
             } catch (err) { showError('Failed to clear DB: ' + (err && err.message)); }
             finally { setLoading(false) }
         });
