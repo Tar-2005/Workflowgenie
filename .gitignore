@@ -1,7 +1,5 @@
-# -----------------------------
-# ⚠ DO NOT UPLOAD SECRETS
-# -----------------------------
 
+.env
 credentials.json
 service_account.json
 

@@ -11,7 +11,6 @@ try:
     from dotenv import load_dotenv
     load_dotenv()
 except Exception:
-    # dotenv is optional in some environments; continue without it if missing
     pass
 
 logger = logging.getLogger(__name__)

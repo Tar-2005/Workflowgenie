@@ -74,10 +74,7 @@ Generates a structured daily schedule:
 
   ## Architecture Diagram
 
-  An architecture diagram illustrating the multi-agent flow is included below. Add the image file `flowchart.png` to `legacy/static/` (path: `legacy/static/flowchart.png`) and it will be displayed here automatically.
-
-  ![WorkflowGenie Architecture](legacy/static/flowchart.png)
-(Logic-based, no LLM necessary)
+  An architecture diagram illustrating the multi-agent flow is included below.
 
 #### **Reporter Agent**
 
