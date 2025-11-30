@@ -34,7 +34,7 @@ All LLM outputs are **strict JSON**, enforced through prompt engineering and aut
 
 ## 🧠 **Architecture Overview**
 
-### **1. Multi-Agent System**
+### **Multi-Agent System**
 
 Four independent agents cooperate through well-defined JSON interfaces:
 
