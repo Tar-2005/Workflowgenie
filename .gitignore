@@ -1,11 +1,7 @@
 # -----------------------------
 # ⚠ DO NOT UPLOAD SECRETS
 # -----------------------------
-.env
-*.env
-.env.*
-.env_backup
-!.env.example
+
 credentials.json
 service_account.json
 
