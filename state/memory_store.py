@@ -5,7 +5,9 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-DB_PATH = os.environ.get("WORKFLOWGENIE_DB", "workflowgenie_adk_db.json")
+# Use Railway-safe writable directory
+DB_PATH = os.path.join("/tmp", "workflowgenie_adk_db.json")
+
 
 class TaskMemory:
 
