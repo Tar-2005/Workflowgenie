@@ -1,133 +1,93 @@
-import os
-import sys
-import logging
-import threading
-from flask import Flask, request, jsonify
-from dotenv import load_dotenv
+# --- DEBUG-SAFE additions for legacy/server_flask.py ---
+import traceback
 
-# Add repo root to sys.path
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if REPO_ROOT not in sys.path:
-    sys.path.insert(0, REPO_ROOT)
+# helper to append full traceback to /tmp/init_error.log and also print it
+def _log_init_exception(exc: Exception, context: str = ""):
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    msg = f"INIT EXCEPTION ({context}):\n{tb}\n"
+    # print so Railway logs capture it
+    print(msg, flush=True)
+    # append to a file under /tmp so we can fetch it via an endpoint
+    try:
+        with open("/tmp/init_error.log", "a", encoding="utf-8") as f:
+            f.write(msg)
+    except Exception as e:
+        # If we cannot write to /tmp, also print that error
+        print("Failed to write /tmp/init_error.log:", e, flush=True)
 
-load_dotenv()
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("legacy.server_flask")
-
-
-def create_app():
-    STATIC_DIR = os.path.join(REPO_ROOT, "legacy", "static")
-    app = Flask("workflowgenie", static_folder=STATIC_DIR, static_url_path="/static")
-
-    app.config["READY"] = False
-    app.config["INIT_IN_PROGRESS"] = False
-    app.config["INIT_ERROR"] = None
-
-    app.config["llm"] = None
-    app.config["tools"] = None
-    app.config["memory"] = None
-    app.config["workflow"] = None
-
-    from workflows.workflow import build_workflow, run as workflow_run
-
-    def heavy_init():
-        logger.info("Heavy init thread started...")
-        try:
-            with app.app_context():
-
-                # Tools
+# Replace heavy_init with the debug-safe version
+def heavy_init():
+    logger.info("Heavy init thread started (DEBUG MODE)...")
+    try:
+        with app.app_context():
+            # Tools
+            try:
                 from tools.calendar_tool import CalendarTool
                 from tools.reminder_tool import ReminderTool
                 calendar = CalendarTool()
                 reminder = ReminderTool()
                 app.config["tools"] = {"calendar": calendar, "reminder": reminder}
+                logger.info("Tools initialized (DEBUG)")
+            except Exception as e:
+                _log_init_exception(e, "tools init")
+                raise
 
-                # Memory
+            # Memory (TinyDB) -- ensure DB path uses /tmp in memory_store.py
+            try:
                 from state.memory_store import TaskMemory
                 memory = TaskMemory(tools=app.config["tools"])
                 memory.cleanup_on_startup()
                 app.config["memory"] = memory
+                logger.info("Memory startup cleanup complete (DEBUG)")
+            except Exception as e:
+                _log_init_exception(e, "memory init")
+                raise
 
-                # LLM
+            # LLM
+            try:
                 from llm import LLM
                 llm = LLM()
                 app.config["llm"] = llm
+                logger.info("LLM initialized (DEBUG)")
+            except Exception as e:
+                _log_init_exception(e, "llm init")
+                raise
 
-                # Workflow
+            # Workflow
+            try:
+                from workflows.workflow import build_workflow
                 flow = build_workflow()
                 app.config["workflow"] = flow
+                logger.info("Workflow built (DEBUG)")
+            except Exception as e:
+                _log_init_exception(e, "workflow build")
+                raise
 
-            app.config["READY"] = True
-            logger.info("Heavy init completed. READY=True")
-        except Exception as e:
-            logger.exception("INIT ERROR")
-            app.config["INIT_ERROR"] = str(e)
-            app.config["READY"] = False
-        finally:
-            app.config["INIT_IN_PROGRESS"] = False
+        # If we get here it's OK
+        app.config["READY"] = True
+        logger.info("Heavy init completed. READY=True (DEBUG)")
+    except Exception as e:
+        # log and keep the app alive
+        logger.exception("Background startup failed (DEBUG); check /tmp/init_error.log")
+        _log_init_exception(e, "heavy_init outer")
+        app.config["INIT_ERROR"] = str(e)
+        app.config["READY"] = False
+    finally:
+        app.config["INIT_IN_PROGRESS"] = False
 
-    def start_init():
-        if not app.config["INIT_IN_PROGRESS"] and not app.config["READY"]:
-            app.config["INIT_IN_PROGRESS"] = True
-            threading.Thread(target=heavy_init, daemon=True).start()
-
-    @app.before_request
-    def ensure_init():
-        start_init()
-
-    @app.route("/")
-    def root():
-        index = os.path.join(app.static_folder, "index.html")
-        if os.path.exists(index):
-            return app.send_static_file("index.html")
-        return jsonify({"ok": True, "message": "WorkflowGenie API"})
-
-    @app.route("/health")
-    def health():
-        return jsonify({"status": "ok"})
-
-    @app.route("/ready")
-    def ready():
-        if app.config["READY"]:
-            return jsonify({"status": "ready"}), 200
-        return jsonify({
-            "status": "initializing",
-            "error": app.config["INIT_ERROR"]
-        }), 503
-
-    @app.route("/run", methods=["POST"])
-    def run_api():
-        if not app.config["READY"]:
-            return jsonify({"error": "initializing"}), 503
-
-        data = request.get_json(silent=True) or {}
-        text = data.get("text")
-        if not text:
-            return jsonify({"error": "no text"}), 400
-
-        # isolated per-request tools/memory
-        from tools.calendar_tool import CalendarTool
-        from tools.reminder_tool import ReminderTool
-        from state.memory_store import TaskMemory
-
-        calendar = CalendarTool()
-        reminder = ReminderTool()
-        memory = TaskMemory(
-            tools={"calendar": calendar, "reminder": reminder},
-            llm=app.config["llm"]
-        )
-        memory.cleanup_on_startup()
-
-        result = workflow_run(app.config["workflow"], memory=memory, inputs={"text": text})
-
-        return jsonify({"result": result})
-
-    return app
-
-
-app = create_app()
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "8080"))
-    app.run(host="0.0.0.0", port=port)
+# Ensure the start_init and ensure_init behavior still runs; keep existing start_init/ensure_init
+# (no change needed if already present)
+# --- add debug endpoint to read /tmp/init_error.log ---
+@app.route("/debug-init", methods=["GET"])
+def debug_init_log():
+    # Return last N lines of /tmp/init_error.log
+    try:
+        p = "/tmp/init_error.log"
+        if not os.path.exists(p):
+            return jsonify({"ok": False, "message": "no init log found"}), 404
+        with open(p, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+            tail = lines[-200:] if len(lines) > 200 else lines
+            return jsonify({"ok": True, "tail": tail})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
