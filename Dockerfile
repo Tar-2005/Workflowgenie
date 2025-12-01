@@ -16,4 +16,4 @@ EXPOSE 8080
 
 # IMPORTANT: Use sh -c so $PORT expands
 
-
+CMD ["sh", "-c", "gunicorn -w 1 -k gthread -b 0.0.0.0:$PORT legacy.server_flask:app"]
