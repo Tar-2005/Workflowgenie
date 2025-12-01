@@ -18,7 +18,8 @@ logger = logging.getLogger("legacy.server_flask")
 
 
 def create_app():
-    STATIC_DIR = os.path.join(REPO_ROOT, "legacy", "static")
+    STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+
     app = Flask("workflowgenie", static_folder=STATIC_DIR, static_url_path="/static")
 
     # state flags
