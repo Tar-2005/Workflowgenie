@@ -34,7 +34,7 @@ All LLM outputs are **strict JSON**, enforced through prompt engineering and aut
 
 ## 🧠 **Architecture Overview**
 
-### **1. Multi-Agent System**
+### **Multi-Agent System**
 
 Four independent agents cooperate through well-defined JSON interfaces:
 
@@ -75,6 +75,8 @@ Generates a structured daily schedule:
   ## Architecture Diagram
 
   An architecture diagram illustrating the multi-agent flow is included below.
+
+  ![WorkflowGenie Architecture](legacy/static/flowchart.png)
 
 #### **Reporter Agent**
 
